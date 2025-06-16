@@ -2,20 +2,64 @@ import React, { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext();
 
-export function AuthProvider ({ children }) {
-    const [user, setUser] = useState(null);
+const initialUsers = [
+  { username: 'admin', password: '121314' },
+  // Pode começar com o admin já cadastrado
+];
 
-    const login = (username) => setUser({ name: username });
-    const logout = () => setUser (null); 
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [users, setUsers] = useState(initialUsers);
 
-
-    return (
-        <AuthContext.Provider value={{ user, login, logout }}>
-            {children}
-        </AuthContext.Provider>
+  const login = (username, password) => {
+    const foundUser = users.find(
+      (u) => u.username === username && u.password === password
     );
+    if (foundUser) {
+      setUser(foundUser);
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => setUser(null);
+
+  const register = (username, password) => {
+    if (users.some((u) => u.username === username)) {
+      return false; // Usuário já existe
+    }
+    const newUser = { username, password };
+    setUsers([...users, newUser]);
+    return true;
+  };
+
+  const editUser = (username, newPassword) => {
+    setUsers((prevUsers) =>
+      prevUsers.map((u) =>
+        u.username === username ? { ...u, password: newPassword } : u
+      )
+    );
+    // Se o usuário logado for o editado, atualiza também o estado `user`
+    if (user?.username === username) {
+      setUser((prevUser) => ({ ...prevUser, password: newPassword }));
+    }
+  };
+
+  const deleteUser = (username) => {
+    setUsers((prevUsers) => prevUsers.filter((u) => u.username !== username));
+    // Se o usuário logado for deletado, desloga ele
+    if (user?.username === username) {
+      logout();
+    }
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{ user, users, login, logout, register, editUser, deleteUser }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-export function useAuth() {
-    return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);

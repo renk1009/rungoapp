@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Alert, Button, StyleSheet } from 'react-native';
+import { View, Text, Alert, Button, StyleSheet, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import * as Print from 'expo-print';
 import QRCode from 'react-native-qrcode-svg';
 
 import UserForm from './Userform';
@@ -66,7 +67,9 @@ export default function MainScreen() {
       return;
     }
     if (editMode && selectedUser) {
-      const updatedUsers = users.map(u => u.id === selectedUser.id ? { ...u, name: name.trim(), position } : u);
+      const updatedUsers = users.map(u =>
+        u.id === selectedUser.id ? { ...u, name: name.trim(), position } : u
+      );
       setUsers(updatedUsers);
       setEditMode(false);
       setSelectedUser(null);
@@ -119,60 +122,139 @@ export default function MainScreen() {
   };
 
   const shareQRCode = async () => {
-  if (!qrRef.current || !selectedUser) return;
+    if (!qrRef.current || !selectedUser) return;
 
-  qrRef.current.toDataURL(async (dataURL) => {
-    const fileUri = FileSystem.cacheDirectory + `${selectedUser.code}.png`;
-    await FileSystem.writeAsStringAsync(fileUri, dataURL, {
-      encoding: FileSystem.EncodingType.Base64,
+    qrRef.current.toDataURL(async (dataURL) => {
+      const fileUri = FileSystem.cacheDirectory + `${selectedUser.code}.png`;
+      await FileSystem.writeAsStringAsync(fileUri, dataURL, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Erro', 'Compartilhamento não disponível');
+        return;
+      }
+
+      await Sharing.shareAsync(fileUri);
     });
+  };
 
-    const canShare = await Sharing.isAvailableAsync();
-    if (!canShare) {
-      Alert.alert('Erro', 'Compartilhamento não disponível');
-      return;
+  const exportToPdf = async () => {
+    let htmlContent = `
+      <h1>Lista de Funcionários</h1>
+      <table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+        <thead>
+          <tr style="background-color: #ddd;">
+            <th>Nome</th>
+            <th>Cargo</th>
+            <th>PIN</th>
+            <th>Leituras</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${users
+            .map(
+              (user) => `
+            <tr>
+              <td>${user.name}</td>
+              <td>${user.position}</td>
+              <td>${user.code}</td>
+              <td>${scanLog[user.code] || 0}</td>
+            </tr>
+          `
+            )
+            .join('')}
+        </tbody>
+      </table>
+    `;
+
+    try {
+      await Print.printAsync({ html: htmlContent });
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível gerar o PDF.');
+      console.error(error);
     }
-
-    await Sharing.shareAsync(fileUri);
-  });
-};
-
+  };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Cadastro de Funcionários</Text>
 
-      <UserForm
-        name={name}
-        setName={setName}
-        position={position}
-        setPosition={setPosition}
-        editMode={editMode}
-        onSubmit={handleRegister}
-      />
+      <View style={styles.sectionWrapper}>
+        <UserForm
+          name={name}
+          setName={setName}
+          position={position}
+          setPosition={setPosition}
+          editMode={editMode}
+          onSubmit={handleRegister}
+        />
+      </View>
 
-      <UserList
-        users={users}
-        search={search}
-        setSearch={setSearch}
-        selectedUser={selectedUser}
-        onUserPress={handleUserPress}
-      />
+      <View style={styles.sectionWrapper}>
+        <UserList
+          users={users}
+          search={search}
+          setSearch={setSearch}
+          selectedUser={selectedUser}
+          onUserPress={handleUserPress}
+        />
+      </View>
 
-      <UserDetails
-        selectedUser={selectedUser}
-        scanLog={scanLog}
-        onCopy={copyToClipboard}
-        onShare={shareQRCode}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        qrRef={qrRef}
-      />
-    </View>
+      <View style={styles.sectionWrapper}>
+        <UserDetails
+          selectedUser={selectedUser}
+          scanLog={scanLog}
+          onCopy={copyToClipboard}
+          onShare={shareQRCode}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          qrRef={qrRef}
+        />
+      </View>
+
+      <View style={styles.exportButtonWrapper}>
+        <Button
+          title="Exportar Lista para PDF"
+          onPress={exportToPdf}
+          color="#4CAF50"
+        />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f0f0f0' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  container: {
+    padding: 20,
+    backgroundColor: '#fff',
+    paddingBottom: 40,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    marginBottom: 25,
+    textAlign: 'center',
+    color: '#222',
+  },
+  sectionWrapper: {
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    // Sombra iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    // Sombra Android
+    elevation: 3,
+  },
+  exportButtonWrapper: {
+    marginTop: 10,
+    borderRadius: 8,
+    overflow: 'hidden',
+    elevation: 2,
+  },
 });
