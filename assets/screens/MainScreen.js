@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Alert, Button, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  Alert,
+  Button,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
@@ -178,58 +187,65 @@ export default function MainScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Cadastro de Funcionários</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.container}>
+          <Text style={styles.title}>Cadastro de Funcionários</Text>
 
-      <View style={styles.sectionWrapper}>
-        <UserForm
-          name={name}
-          setName={setName}
-          position={position}
-          setPosition={setPosition}
-          editMode={editMode}
-          onSubmit={handleRegister}
-        />
-      </View>
+          <View style={styles.sectionWrapper}>
+            <UserForm
+              name={name}
+              setName={setName}
+              position={position}
+              setPosition={setPosition}
+              editMode={editMode}
+              onSubmit={handleRegister}
+            />
+          </View>
 
-      <View style={styles.sectionWrapper}>
-        <UserList
-          users={users}
-          search={search}
-          setSearch={setSearch}
-          selectedUser={selectedUser}
-          onUserPress={handleUserPress}
-        />
-      </View>
+          <View style={[styles.sectionWrapper, { flex: 1 }]}>
+            <UserList
+              users={users}
+              search={search}
+              setSearch={setSearch}
+              selectedUser={selectedUser}
+              onUserPress={handleUserPress}
+            />
+          </View>
 
-      <View style={styles.sectionWrapper}>
-        <UserDetails
-          selectedUser={selectedUser}
-          scanLog={scanLog}
-          onCopy={copyToClipboard}
-          onShare={shareQRCode}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          qrRef={qrRef}
-        />
-      </View>
+          <View style={styles.sectionWrapper}>
+            <UserDetails
+              selectedUser={selectedUser}
+              scanLog={scanLog}
+              onCopy={copyToClipboard}
+              onShare={shareQRCode}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              qrRef={qrRef}
+            />
+          </View>
 
-      <View style={styles.exportButtonWrapper}>
-        <Button
-          title="Exportar Lista para PDF"
-          onPress={exportToPdf}
-          color="#4CAF50"
-        />
-      </View>
-    </ScrollView>
+          <View style={styles.exportButtonWrapper}>
+            <Button
+              title="Exportar Lista para PDF"
+              onPress={exportToPdf}
+              color="#4CAF50"
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   title: {
     fontSize: 26,
@@ -242,13 +258,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
     borderRadius: 12,
     padding: 15,
-    marginBottom: 20,
-    // Sombra iOS
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    // Sombra Android
     elevation: 3,
   },
   exportButtonWrapper: {
